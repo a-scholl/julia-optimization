@@ -1,0 +1,7 @@
+name = "optimization"
+uuid = "981be6ec-d73b-44fd-8aba-145a227a2b43"
+authors = ["Andrew Schollmeier <andrew.schollmeier@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
