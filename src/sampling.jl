@@ -35,7 +35,7 @@ returns = rand(mvn, num_return_samples)
 
 
 weight_distribution = Distributions.Dirichlet(num_funds, 1)
-num_weight_samples = 50000
+num_weight_samples = 5000
 rand_weights = rand(weight_distribution, num_weight_samples)
 
 function compute_portfolio_returns(weights, returns)
@@ -81,9 +81,9 @@ end
 
 obj = objective(weights=rand_weights, returns=returns)
 
-Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
+plt = Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
 
-function dominates2(x, y)
+function dominates(x, y)
     strict_inequality_found = false
     for i in eachindex(x)
         y[i] < x[i] && return false
@@ -96,14 +96,70 @@ end
 function naive_pareto(xs::Matrix{Float64}, ys::Matrix{Float64})
     nondominated_idx = Vector{Int64}()
     for (i, y) in enumerate(eachcol(ys))
-        if !any(dominates2(y′, y) for y′ in eachcol(ys))
+        if !any(dominates(y′, y) for y′ in eachcol(ys))
             push!(nondominated_idx, i)
         end
     end
     return (xs[:, nondominated_idx], ys[:, nondominated_idx])
 end
 
-@time par_weights, par_obj = naive_pareto(rand_weights, obj)
-@btime par_weights, par_obj = naive_pareto(rand_weights, obj)
-Plots.scatter!(par_obj[1, :], par_obj[2, :], label="nondominated")
+par_weights, par_obj = naive_pareto(rand_weights, obj)
+#@profview par_weights, par_obj = naive_pareto(rand_weights, obj)
+# Plots.scatter!(par_obj[1, :], par_obj[2, :], label="nondominated")
 
+function get_non_domination_levels(ys)
+    ys_col = eachcol(ys)
+    L, m = 0, length(ys_col)
+    levels = zeros(Int, m)
+    while minimum(levels) == 0
+        L += 1
+        for (i, y) in enumerate(ys_col)
+            if levels[i] == 0 
+                dominator_found = false
+                for j in 1:m
+                    if (levels[j] == 0 || levels[j] == L) && dominates(ys_col[j], y)
+                        dominator_found = true
+                        break
+                    end
+                end
+                (!dominator_found) && (levels[i] = L)
+            end
+        end
+    end
+    return levels
+end 
+
+@profview levels = @inbounds get_non_domination_levels(obj)
+@btime  levels = @inbounds get_non_domination_levels(obj)
+
+max_level = 5
+for level in 1:max_level
+    idx = findall(==(level), levels)
+    print(level)
+    # print(idx)
+    Plots.scatter!(plt, obj[1, idx], obj[2, idx], label="Level $level")
+end
+plt
+
+num_parents = 200 
+num_generations = 100
+population = rand(weight_distribution, num_parents)
+obj = objective(weights=population, returns=returns)
+plt = Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
+
+
+for gen in 1:num_generations
+    new_population = similar(population)
+    for i in 1:num_parents
+        new_population[:, i] = shuffle(population[:, i])
+    end
+    population = hcat(population, new_population)
+    print(size(population))z
+    obj = objective(weights=population, returns=returns)
+    levels = get_non_domination_levels(obj)
+    surviving_idx = sortperm(levels)[1:num_parents]
+    population = population[:, surviving_idx]
+    obj = obj[:, surviving_idx]
+    Plots.scatter!(plt, obj[1, :], obj[2, :], label="Generation $gen")
+end 
+plt
