@@ -22,7 +22,6 @@ for i = 1:num_funds
         (7:9, 7:9) => 0.1
         _          => continue
         end 
-        print(i)
         cor_mat[i, j] = cor_mat[j, i] = new_cor
     end
 end 
@@ -74,8 +73,6 @@ function objective(;weights, returns)::Matrix{Float64}
         threshold=0.10,
     )
     portfolio_vol = compute_portfolio_volatility(portfolio_returns)
-    print(size(portfolio_returns))
-    print(size(portfolio_vol))
     return vcat(-threshold_likelihood, portfolio_vol)
 end
 
@@ -141,8 +138,9 @@ for level in 1:max_level
 end
 plt
 
-num_parents = 200 
-num_generations = 100
+num_parents = 200
+num_generations = 1000
+every = num_generations / 5
 population = rand(weight_distribution, num_parents)
 obj = objective(weights=population, returns=returns)
 plt = Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
@@ -154,12 +152,16 @@ for gen in 1:num_generations
         new_population[:, i] = shuffle(population[:, i])
     end
     population = hcat(population, new_population)
-    print(size(population))z
     obj = objective(weights=population, returns=returns)
     levels = get_non_domination_levels(obj)
     surviving_idx = sortperm(levels)[1:num_parents]
     population = population[:, surviving_idx]
     obj = obj[:, surviving_idx]
-    Plots.scatter!(plt, obj[1, :], obj[2, :], label="Generation $gen")
+    if gen % every == 0
+        par_weights, par_obj = naive_pareto(population, obj)
+        Plots.scatter!(plt, par_obj[1, :], par_obj[2, :], label="Generation $gen")
+    end
 end 
+
+
 plt
