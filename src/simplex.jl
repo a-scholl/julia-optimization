@@ -60,12 +60,52 @@ function get_layer_indices(;y::BigInt, n::BigInt)
         j = n - i + 1 
         V = content(j)
         H = height(j)
-        k = ceil( ((y / V) ^ (1/(j-1))) * H )
+        k = BigInt(ceil( ((y / V) ^ (1/(j-1))) * H ))
         append!(ks, k)
         y = y - (((k-1)/H) ^ (j-1)) * V
-        println(y)
     end
     return ks
 end
 
-ks = get_layer_indices(y=y, n=BigInt(40))
+y = sample_big_int(num_bits=64 * 3)
+ks = get_layer_indices(y=y, n=BigInt(3))
+
+function get_coords_from_layer_indices(indices, float_bits=64) 
+    n = BigInt(length(indices) + 1)
+    cube_edge_length = calculate_cube_edge_length(n=n, float_bits=float_bits)
+    h̄ = (indices[1] - 0.5) * cube_edge_length
+    H = height(n)
+    first_ratio = h̄ / H
+    last_coord = 1 - first_ratio
+    coords = [last_coord]
+    for i in 2:(n-1)
+        k = indices[i]
+        j = n - i + 1
+        h̄ = (k - 0.5) * cube_edge_length
+        H = height(j)
+        second_ratio = h̄ / H 
+        new_coord = first_ratio - second_ratio
+        push!(coords, new_coord)
+        first_ratio = second_ratio
+    end
+    push!(coords, first_ratio)
+    return coords
+end 
+
+@btime begin 
+y = sample_big_int(num_bits=64 * 3)
+ks = get_layer_indices(y=y, n=BigInt(3))
+coords = get_coords_from_layer_indices(ks)
+end
+
+
+sample_size = 1000
+samples = []
+for _ in 1:sample_size
+    y = sample_big_int(num_bits = 64 * 3)
+    layer_indices = get_layer_indices(y=y, n=BigInt(3))
+    coords = get_coords_from_layer_indices(layer_indices)
+    push!(samples, coords)
+end
+samples = transpose(reduce(hcat, samples))
+plot3d(samples)
