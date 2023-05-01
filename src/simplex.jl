@@ -5,9 +5,6 @@ import Random: rand
 using BitIntegers
 using BenchmarkTools
 
-dim = 3
-corners = Matrix(I*1.0, dim, dim)
-
 function plot3d(weights)
     plot(scatter(
         x=weights[:,1],
@@ -20,8 +17,6 @@ function plot3d(weights)
         )
     ))
 end
-
-plot3d(corners)
 
 function sample_big_int(;num_bits)
     result = BigInt(0)
@@ -41,8 +36,6 @@ function sample_big_int(;num_bits)
     end
     return result
 end
-
-y = sample_big_int(num_bits=64 * 3)
 
 content(n::BigInt) = sqrt(n) / factorial(n-1)
 
@@ -67,8 +60,6 @@ function get_layer_indices(;y::BigInt, n::BigInt)
     return ks
 end
 
-y = sample_big_int(num_bits=64 * 3)
-ks = get_layer_indices(y=y, n=BigInt(3))
 
 function get_coords_from_layer_indices(indices, float_bits=64) 
     n = BigInt(length(indices) + 1)
@@ -92,20 +83,15 @@ function get_coords_from_layer_indices(indices, float_bits=64)
     return coords
 end 
 
-@btime begin 
-y = sample_big_int(num_bits=64 * 3)
-ks = get_layer_indices(y=y, n=BigInt(3))
-coords = get_coords_from_layer_indices(ks)
-end
 
-
-sample_size = 1000
-samples = []
-for _ in 1:sample_size
-    y = sample_big_int(num_bits = 64 * 3)
-    layer_indices = get_layer_indices(y=y, n=BigInt(3))
-    coords = get_coords_from_layer_indices(layer_indices)
-    push!(samples, coords)
+function test_sampling(sample_size)
+    samples = []
+    for _ in 1:sample_size
+        y = sample_big_int(num_bits = 64 * 3)
+        layer_indices = get_layer_indices(y=y, n=BigInt(3))
+        coords = get_coords_from_layer_indices(layer_indices)
+        push!(samples, coords)
+    end
+    samples = transpose(reduce(hcat, samples))
+    # plot3d(samples)
 end
-samples = transpose(reduce(hcat, samples))
-plot3d(samples)

@@ -33,15 +33,17 @@ num_return_samples = 1000
 returns = rand(mvn, num_return_samples)
 
 
-weight_distribution = Distributions.Dirichlet(num_funds, 1)
-num_weight_samples = 5000
-rand_weights = rand(weight_distribution, num_weight_samples)
+# weight_distribution = Distributions.Dirichlet(num_funds, 1)
+# num_weight_samples = 5000
+# rand_weights = rand(weight_distribution, num_weight_samples)
+
+
 
 function compute_portfolio_returns(weights, returns)
     return transpose(transpose(weights) * returns)
 end
 
-portfolio_returns = compute_portfolio_returns(rand_weights, returns)
+# portfolio_returns = compute_portfolio_returns(rand_weights, returns)
 
 function compute_portfolio_volatility(portfolio_returns)
     ncol = size(portfolio_returns)[2]
@@ -76,9 +78,9 @@ function objective(;weights, returns)::Matrix{Float64}
     return vcat(-threshold_likelihood, portfolio_vol)
 end
 
-obj = objective(weights=rand_weights, returns=returns)
+#obj = objective(weights=rand_weights, returns=returns)
 
-plt = Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
+#plt = Plots.scatter(obj[1, :], obj[2, :], xlabel="Return Threshold Likelihood", ylabel="Portfolio Volatility", label="dominated")
 
 function dominates(x, y)
     strict_inequality_found = false
@@ -90,17 +92,17 @@ function dominates(x, y)
 end
 
 
-function naive_pareto(xs::Matrix{Float64}, ys::Matrix{Float64})
+function naive_pareto(ys::Matrix{Float64})
     nondominated_idx = Vector{Int64}()
     for (i, y) in enumerate(eachcol(ys))
         if !any(dominates(y′, y) for y′ in eachcol(ys))
             push!(nondominated_idx, i)
         end
     end
-    return (xs[:, nondominated_idx], ys[:, nondominated_idx])
+    return nondominated_idx
 end
 
-par_weights, par_obj = naive_pareto(rand_weights, obj)
+#par_weights, par_obj = naive_pareto(rand_weights, obj)
 #@profview par_weights, par_obj = naive_pareto(rand_weights, obj)
 # Plots.scatter!(par_obj[1, :], par_obj[2, :], label="nondominated")
 
@@ -126,6 +128,7 @@ function get_non_domination_levels(ys)
     return levels
 end 
 
+#=
 @profview levels = @inbounds get_non_domination_levels(obj)
 @btime  levels = @inbounds get_non_domination_levels(obj)
 
@@ -165,3 +168,4 @@ end
 
 
 plt
+=#
